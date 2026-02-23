@@ -3,7 +3,7 @@ local M = {}
 
 M.config = {
   highlight_group = "ClmuxFlash",
-  highlight_duration = 1500,
+  highlight_duration = 3000,
   discovery_dir = vim.fn.expand("~/.claude/nvim-servers"),
   auto_install = true,
 }
@@ -149,19 +149,13 @@ function M.setup(opts)
 end
 
 function M._flash(buf, start_line, end_line)
-  local hl = vim.api.nvim_get_hl(0, { name = M.config.highlight_group })
-  if vim.tbl_isempty(hl) then
-    vim.api.nvim_set_hl(0, M.config.highlight_group, { link = "IncSearch" })
-  end
+  vim.api.nvim_set_hl(0, M.config.highlight_group, { bg = "#5f3f6f", fg = "#e0d0f0", bold = true })
 
   vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
 
   for line = start_line, end_line do
     vim.api.nvim_buf_set_extmark(buf, ns, line - 1, 0, {
-      end_row = line - 1,
-      end_col = 0,
-      hl_group = M.config.highlight_group,
-      hl_eol = true,
+      line_hl_group = M.config.highlight_group,
     })
   end
 
