@@ -72,6 +72,7 @@ require('clmux').setup({
   highlight_group = "ClmuxFlash",                        -- highlight group name
   highlight = { bg = "#5f3f6f", fg = "#e0d0f0", bold = true }, -- flash style
   highlight_duration = 3000,                             -- ms before flash fades
+  jump = true,                                           -- jump cursor to change
   discovery_dir = "~/.claude/nvim-servers",
   auto_install = true,                                   -- auto-install hook
 })

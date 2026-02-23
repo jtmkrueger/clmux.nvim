@@ -5,6 +5,7 @@ M.config = {
   highlight_group = "ClmuxFlash",
   highlight = { bg = "#5f3f6f", fg = "#e0d0f0", bold = true },
   highlight_duration = 3000,
+  jump = true,
   discovery_dir = vim.fn.expand("~/.claude/nvim-servers"),
   auto_install = true,
 }
@@ -206,17 +207,18 @@ function M.on_file_changed(file_path, start_line, end_line)
     return
   end
 
-  -- Jump and highlight in each visible window
+  -- Jump and/or highlight in each visible window
   for _, win in ipairs(visible_wins) do
     local line_count = vim.api.nvim_buf_line_count(target_buf)
     local safe_line = math.min(start_line, line_count)
     local safe_end = math.min(end_line, line_count)
 
-    vim.api.nvim_win_set_cursor(win, { safe_line, 0 })
-
-    vim.api.nvim_win_call(win, function()
-      vim.cmd("normal! zz")
-    end)
+    if M.config.jump then
+      vim.api.nvim_win_set_cursor(win, { safe_line, 0 })
+      vim.api.nvim_win_call(win, function()
+        vim.cmd("normal! zz")
+      end)
+    end
 
     M._flash(target_buf, safe_line, safe_end)
   end
