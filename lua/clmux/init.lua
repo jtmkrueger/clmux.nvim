@@ -195,32 +195,49 @@ function M.on_file_changed(file_path, start_line, end_line)
   local buf_lines = vim.api.nvim_buf_get_lines(target_buf, 0, -1, false)
 
   -- The hook tells us where the change landed on disk (start_line/end_line).
-  -- We use context lines above and below the change to find the
-  -- corresponding region in the buffer, so user edits elsewhere are safe.
+  -- We search outward from the expected position to find the matching region
+  -- in the buffer, so user edits elsewhere don't confuse us.
 
-  -- The line just above the change on disk (nil if change starts at line 1)
-  local context_above = start_line > 1 and disk_lines[start_line - 1] or nil
-  -- The line just below the change on disk (nil if change ends at last line)
-  local context_below = end_line < #disk_lines and disk_lines[end_line + 1] or nil
-
-  -- Find the matching region in the buffer
-  local buf_start = start_line -- default: assume same position
-  if context_above then
-    for i = 1, #buf_lines do
-      if buf_lines[i] == context_above then
-        buf_start = i + 1
+  -- Search for a line matching `target` starting at `origin` and expanding
+  -- outward. Returns the matching line number or nil.
+  local function find_nearest(lines, origin, target)
+    origin = math.max(1, math.min(origin, #lines))
+    if lines[origin] == target then
+      return origin
+    end
+    for offset = 1, #lines do
+      local above = origin - offset
+      local below = origin + offset
+      if above >= 1 and lines[above] == target then
+        return above
+      end
+      if below <= #lines and lines[below] == target then
+        return below
+      end
+      if above < 1 and below > #lines then
         break
       end
+    end
+    return nil
+  end
+
+  local context_above = start_line > 1 and disk_lines[start_line - 1] or nil
+  local context_below = end_line < #disk_lines and disk_lines[end_line + 1] or nil
+
+  -- Find the matching region in the buffer, searching near expected position
+  local buf_start = start_line -- default: assume same position
+  if context_above then
+    local match = find_nearest(buf_lines, start_line - 1, context_above)
+    if match then
+      buf_start = match + 1
     end
   end
 
   local buf_end = buf_start + (end_line - start_line) -- default: same size region
   if context_below then
-    for i = buf_start, #buf_lines do
-      if buf_lines[i] == context_below then
-        buf_end = i - 1
-        break
-      end
+    local match = find_nearest(buf_lines, buf_start + (end_line - start_line) + 1, context_below)
+    if match then
+      buf_end = match - 1
     end
   else
     buf_end = #buf_lines

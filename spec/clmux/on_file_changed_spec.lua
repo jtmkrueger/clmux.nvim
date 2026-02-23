@@ -71,6 +71,47 @@ describe("on_file_changed", function()
     assert.equals(5, #lines)
   end)
 
+  it("matches nearest context when duplicate lines exist", function()
+    -- File has multiple "end" lines (common in Lua/Ruby)
+    local dupfile = vim.fn.tempname() .. ".lua"
+    vim.fn.writefile({
+      "if true then",   -- 1
+      "  a()",           -- 2
+      "end",             -- 3
+      "if true then",   -- 4
+      "  b()",           -- 5
+      "end",             -- 6
+      "if true then",   -- 7
+      "  c()",           -- 8
+      "end",             -- 9
+    }, dupfile)
+    vim.cmd("edit " .. dupfile)
+
+    -- Change line 5 on disk
+    vim.fn.writefile({
+      "if true then",
+      "  a()",
+      "end",
+      "if true then",
+      "  CHANGED()",
+      "end",
+      "if true then",
+      "  c()",
+      "end",
+    }, dupfile)
+    clmux.on_file_changed(dupfile, 5, 5)
+
+    local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    assert.equals(9, #lines)
+    assert.equals("  CHANGED()", lines[5])
+    -- Surrounding lines preserved
+    assert.equals("  a()", lines[2])
+    assert.equals("  c()", lines[8])
+
+    vim.cmd("bdelete!")
+    vim.fn.delete(dupfile)
+  end)
+
   it("does nothing if file is not in any visible window", function()
     local otherfile = vim.fn.tempname() .. ".lua"
     vim.fn.writefile({ "other" }, otherfile)
