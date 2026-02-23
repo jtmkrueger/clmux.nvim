@@ -1,7 +1,7 @@
 .PHONY: test lint test-hook test-all
 
 test:
-	@eval $$(luarocks path --no-bin) && busted --verbose
+	@eval $$(luarocks --lua-version 5.1 path --no-bin) && busted --verbose
 
 lint:
 	luacheck lua/ spec/
