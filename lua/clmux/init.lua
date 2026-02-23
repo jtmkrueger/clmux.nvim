@@ -3,6 +3,7 @@ local M = {}
 
 M.config = {
   highlight_group = "ClmuxFlash",
+  highlight = { bg = "#5f3f6f", fg = "#e0d0f0", bold = true },
   highlight_duration = 3000,
   discovery_dir = vim.fn.expand("~/.claude/nvim-servers"),
   auto_install = true,
@@ -149,7 +150,7 @@ function M.setup(opts)
 end
 
 function M._flash(buf, start_line, end_line)
-  vim.api.nvim_set_hl(0, M.config.highlight_group, { bg = "#5f3f6f", fg = "#e0d0f0", bold = true })
+  vim.api.nvim_set_hl(0, M.config.highlight_group, M.config.highlight)
 
   vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
 

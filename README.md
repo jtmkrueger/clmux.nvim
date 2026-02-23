@@ -69,22 +69,16 @@ cat ~/.claude/nvim-servers/*.json
 
 ```lua
 require('clmux').setup({
-  highlight_group = "ClmuxFlash",  -- highlight group for the flash
-  highlight_duration = 1500,       -- ms before highlight fades
+  highlight_group = "ClmuxFlash",                        -- highlight group name
+  highlight = { bg = "#5f3f6f", fg = "#e0d0f0", bold = true }, -- flash style
+  highlight_duration = 3000,                             -- ms before flash fades
   discovery_dir = "~/.claude/nvim-servers",
-  auto_install = true,             -- auto-install hook and register in settings
+  auto_install = true,                                   -- auto-install hook
 })
 ```
 
 Set `auto_install = false` if you prefer to manage the hook and settings
 yourself. See `install.sh` for a manual install script.
-
-The `ClmuxFlash` highlight group defaults to linking to `IncSearch`. Override it
-in your colorscheme if you want a different flash color:
-
-```lua
-vim.api.nvim_set_hl(0, "ClmuxFlash", { bg = "#4a3a5a" })
-```
 
 ## Uninstall
 
