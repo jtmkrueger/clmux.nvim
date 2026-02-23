@@ -190,10 +190,60 @@ function M.on_file_changed(file_path, start_line, end_line)
     return
   end
 
-  -- Reload the buffer from disk
-  vim.api.nvim_buf_call(target_buf, function()
-    vim.cmd("edit!")
-  end)
+  -- Read new content from disk
+  local disk_lines = vim.fn.readfile(abs_path)
+  local buf_lines = vim.api.nvim_buf_get_lines(target_buf, 0, -1, false)
+
+  -- The hook tells us where the change landed on disk (start_line/end_line).
+  -- We use context lines above and below the change to find the
+  -- corresponding region in the buffer, so user edits elsewhere are safe.
+
+  -- The line just above the change on disk (nil if change starts at line 1)
+  local context_above = start_line > 1 and disk_lines[start_line - 1] or nil
+  -- The line just below the change on disk (nil if change ends at last line)
+  local context_below = end_line < #disk_lines and disk_lines[end_line + 1] or nil
+
+  -- Find the matching region in the buffer
+  local buf_start = start_line -- default: assume same position
+  if context_above then
+    for i = 1, #buf_lines do
+      if buf_lines[i] == context_above then
+        buf_start = i + 1
+        break
+      end
+    end
+  end
+
+  local buf_end = buf_start + (end_line - start_line) -- default: same size region
+  if context_below then
+    for i = buf_start, #buf_lines do
+      if buf_lines[i] == context_below then
+        buf_end = i - 1
+        break
+      end
+    end
+  else
+    buf_end = #buf_lines
+  end
+
+  -- Extract the new lines from disk
+  local new_lines = {}
+  for i = start_line, end_line do
+    if disk_lines[i] then
+      table.insert(new_lines, disk_lines[i])
+    end
+  end
+
+  -- Splice into buffer (0-indexed)
+  local safe_buf_end = math.min(buf_end, #buf_lines)
+  vim.api.nvim_buf_set_lines(target_buf, buf_start - 1, safe_buf_end, false, new_lines)
+
+  -- Flash range (1-indexed)
+  local flash_start = buf_start
+  local flash_end = buf_start + #new_lines - 1
+  if #new_lines == 0 then
+    flash_end = flash_start
+  end
 
   -- Find visible windows showing this buffer
   local visible_wins = {}
@@ -210,8 +260,8 @@ function M.on_file_changed(file_path, start_line, end_line)
   -- Jump and/or highlight in each visible window
   for _, win in ipairs(visible_wins) do
     local line_count = vim.api.nvim_buf_line_count(target_buf)
-    local safe_line = math.min(start_line, line_count)
-    local safe_end = math.min(end_line, line_count)
+    local safe_line = math.min(flash_start, line_count)
+    local safe_end = math.min(flash_end, line_count)
 
     if M.config.jump then
       vim.api.nvim_win_set_cursor(win, { safe_line, 0 })
