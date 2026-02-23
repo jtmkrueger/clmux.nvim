@@ -190,6 +190,12 @@ function M.on_file_changed(file_path, start_line, end_line)
     return
   end
 
+  -- Suppress the W12 "file has changed" warning by temporarily
+  -- enabling autoread, then checktime after the splice to update
+  -- neovim's file timestamp tracking.
+  local old_autoread = vim.bo[target_buf].autoread
+  vim.bo[target_buf].autoread = true
+
   -- Read new content from disk
   local disk_lines = vim.fn.readfile(abs_path)
   local buf_lines = vim.api.nvim_buf_get_lines(target_buf, 0, -1, false)
@@ -237,6 +243,12 @@ function M.on_file_changed(file_path, start_line, end_line)
   -- Splice into buffer (0-indexed)
   local safe_buf_end = math.min(buf_end, #buf_lines)
   vim.api.nvim_buf_set_lines(target_buf, buf_start - 1, safe_buf_end, false, new_lines)
+
+  -- Update neovim's file timestamp so it won't prompt about the change
+  vim.api.nvim_buf_call(target_buf, function()
+    vim.cmd("checktime")
+  end)
+  vim.bo[target_buf].autoread = old_autoread
 
   -- Flash range (1-indexed)
   local flash_start = buf_start
