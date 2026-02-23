@@ -19,7 +19,7 @@ describe("discovery", function()
 
     package.loaded["clmux"] = nil
     clmux = require("clmux")
-    clmux.setup({ discovery_dir = tmpdir })
+    clmux.setup({ discovery_dir = tmpdir, auto_install = false })
   end)
 
   after_each(function()

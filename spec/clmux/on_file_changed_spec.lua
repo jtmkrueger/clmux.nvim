@@ -5,7 +5,7 @@ describe("on_file_changed", function()
   before_each(function()
     package.loaded["clmux"] = nil
     clmux = require("clmux")
-    clmux.setup({ discovery_dir = vim.fn.tempname() })
+    clmux.setup({ discovery_dir = vim.fn.tempname(), auto_install = false })
 
     tmpfile = vim.fn.tempname() .. ".lua"
     vim.fn.writefile({ "line1", "line2", "line3", "line4", "line5" }, tmpfile)

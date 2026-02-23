@@ -8,6 +8,7 @@ describe("flash highlight", function()
     clmux.setup({
       discovery_dir = vim.fn.tempname(),
       highlight_duration = 100,
+      auto_install = false,
     })
 
     tmpfile = vim.fn.tempname() .. ".lua"
