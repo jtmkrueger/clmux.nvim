@@ -190,12 +190,6 @@ function M.on_file_changed(file_path, start_line, end_line)
     return
   end
 
-  -- Suppress the W12 "file has changed" warning by temporarily
-  -- enabling autoread, then checktime after the splice to update
-  -- neovim's file timestamp tracking.
-  local old_autoread = vim.bo[target_buf].autoread
-  vim.bo[target_buf].autoread = true
-
   -- Read new content from disk
   local disk_lines = vim.fn.readfile(abs_path)
   local buf_lines = vim.api.nvim_buf_get_lines(target_buf, 0, -1, false)
@@ -244,11 +238,22 @@ function M.on_file_changed(file_path, start_line, end_line)
   local safe_buf_end = math.min(buf_end, #buf_lines)
   vim.api.nvim_buf_set_lines(target_buf, buf_start - 1, safe_buf_end, false, new_lines)
 
-  -- Update neovim's file timestamp so it won't prompt about the change
-  vim.api.nvim_buf_call(target_buf, function()
-    vim.cmd("checktime")
-  end)
-  vim.bo[target_buf].autoread = old_autoread
+  -- Tell neovim we've handled the file change so it won't prompt W12.
+  -- The FileChangedShell autocmd fires when neovim notices the file
+  -- changed on disk. Setting v:fcs_choice = "ignore" tells it to
+  -- skip the prompt since we already applied the changes ourselves.
+  local fcs_id = vim.api.nvim_create_autocmd("FileChangedShell", {
+    buffer = target_buf,
+    once = true,
+    callback = function()
+      vim.v.fcs_choice = "ignore"
+    end,
+  })
+
+  -- Clean up the autocmd if it never fires (e.g., file not re-checked)
+  vim.defer_fn(function()
+    pcall(vim.api.nvim_del_autocmd, fcs_id)
+  end, 10000)
 
   -- Flash range (1-indexed)
   local flash_start = buf_start
