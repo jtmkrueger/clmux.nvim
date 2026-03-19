@@ -1,15 +1,13 @@
 # clmux.nvim
 
 See what Claude Code is doing in real time. When Claude edits a file you have
-open, the changes appear in your buffer immediately — no reload prompt, no
+open, the changes appear in your buffer immediately. No reload prompt, no
 context switch. A brief highlight flashes over the changed lines so you can
 follow along.
-
-You can keep working in the same file while Claude edits it. Your unsaved
+You and Claude can work in the file together at the same time. Your unsaved
 changes are preserved; only the lines Claude touched get updated. Claude's
 edits are written to disk normally, so tests and other tools see them right
 away. Your own edits stay in the buffer until you save.
-
 Requires tmux. The plugin uses your tmux session and window to find the right
 Neovim instance when you have multiple running.
 
@@ -26,7 +24,7 @@ Add the plugin with lazy.nvim:
 }
 ```
 
-That's it. On first startup the plugin automatically installs a Claude Code
+On first startup the plugin automatically installs a Claude Code
 hook and registers itself. No manual setup required.
 
 ## What it does

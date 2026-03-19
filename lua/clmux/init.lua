@@ -255,19 +255,46 @@ function M.on_file_changed(file_path, start_line, end_line)
   local safe_buf_end = math.min(buf_end, #buf_lines)
   vim.api.nvim_buf_set_lines(target_buf, buf_start - 1, safe_buf_end, false, new_lines)
 
-  -- Tell neovim we've handled the file change so it won't prompt W12.
-  -- The FileChangedShell autocmd fires when neovim notices the file
-  -- changed on disk. Setting v:fcs_choice = "ignore" tells it to
-  -- skip the prompt since we already applied the changes ourselves.
+  -- Suppress the W12 "file has changed" warning.
+  --
+  -- After the splice, the buffer has the right content (disk changes +
+  -- user edits) but Neovim's stored mtime is stale. If the user tries
+  -- to :write, Neovim compares its stale mtime against the file and
+  -- warns "the file has changed since reading it".
+  --
+  -- Strategy: save the desired buffer lines, reload from disk (which
+  -- updates Neovim's internal mtime), then re-apply any user edits
+  -- that the reload overwrote.
+  local desired_lines = vim.api.nvim_buf_get_lines(target_buf, 0, -1, false)
+  local was_modified = vim.bo[target_buf].modified
+
   local fcs_id = vim.api.nvim_create_autocmd("FileChangedShell", {
     buffer = target_buf,
     once = true,
     callback = function()
-      vim.v.fcs_choice = "ignore"
+      vim.v.fcs_choice = "reload"
     end,
   })
 
-  -- Clean up the autocmd if it never fires (e.g., file not re-checked)
+  vim.api.nvim_buf_call(target_buf, function()
+    vim.cmd("checktime")
+  end)
+
+  -- Re-apply user edits that the reload may have overwritten.
+  -- The reload replaced the buffer with disk content; we restore
+  -- the post-splice content which includes both the disk changes
+  -- and the user's unsaved edits.
+  local reloaded_lines = vim.api.nvim_buf_get_lines(target_buf, 0, -1, false)
+  if not vim.deep_equal(reloaded_lines, desired_lines) then
+    vim.api.nvim_buf_set_lines(target_buf, 0, -1, false, desired_lines)
+  end
+
+  if was_modified then
+    vim.bo[target_buf].modified = true
+  end
+
+  -- Clean up the autocmd if checktime didn't trigger it (e.g., file
+  -- was not yet flushed to disk when we checked).
   vim.defer_fn(function()
     pcall(vim.api.nvim_del_autocmd, fcs_id)
   end, 10000)
